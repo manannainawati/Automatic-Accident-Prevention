@@ -1,0 +1,70 @@
+{
+  "heart_rate": {
+    "unit": "BPM",
+    "normal": {
+      "min": 60,
+      "max": 100,
+      "description": "Normal resting heart rate for adults"
+    },
+    "warning_low": {
+      "min": 50,
+      "max": 59,
+      "description": "Slightly low heart rate - monitor closely"
+    },
+    "warning_high": {
+      "min": 101,
+      "max": 120,
+      "description": "Elevated heart rate - possible stress or anxiety"
+    },
+    "critical_low": {
+      "min": 0,
+      "max": 49,
+      "description": "Dangerously low heart rate - possible bradycardia or sensor failure"
+    },
+    "critical_high": {
+      "min": 121,
+      "max": 180,
+      "description": "Dangerously high heart rate - possible tachycardia or panic"
+    },
+    "emergency": {
+      "min": 181,
+      "max": 300,
+      "description": "Medical emergency - heart attack risk"
+    },
+    "no_pulse_timeout_seconds": 10,
+    "no_pulse_description": "No pulse detected for extended period - possible cardiac arrest"
+  },
+  "spo2": {
+    "unit": "percent",
+    "normal": {
+      "min": 95,
+      "max": 100,
+      "description": "Normal blood oxygen saturation"
+    },
+    "warning": {
+      "min": 90,
+      "max": 94,
+      "description": "Low oxygen - possible hypoxemia, monitor closely"
+    },
+    "critical": {
+      "min": 80,
+      "max": 89,
+      "description": "Dangerously low oxygen - medical attention needed"
+    },
+    "emergency": {
+      "min": 0,
+      "max": 79,
+      "description": "Severe hypoxemia - immediate medical emergency"
+    }
+  },
+  "heart_rate_variability": {
+    "sudden_change_threshold_bpm": 30,
+    "sudden_change_window_seconds": 5,
+    "description": "Sudden change of 30+ BPM within 5 seconds indicates potential cardiac event"
+  },
+  "drowsiness_correlation": {
+    "heart_rate_drop_threshold_bpm": 15,
+    "heart_rate_drop_window_seconds": 30,
+    "description": "Gradual drop of 15+ BPM over 30 seconds may indicate drowsiness"
+  }
+}

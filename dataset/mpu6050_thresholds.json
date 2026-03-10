@@ -1,0 +1,100 @@
+{
+    "acceleration": {
+        "unit": "g (9.81 m/s²)",
+        "normal_driving": {
+            "x_range": [
+                -0.3,
+                0.3
+            ],
+            "y_range": [
+                -0.3,
+                0.3
+            ],
+            "z_range": [
+                0.8,
+                1.2
+            ],
+            "description": "Normal driving vibrations and gentle turns"
+        },
+        "harsh_braking": {
+            "threshold_g": 0.6,
+            "axis": "y",
+            "duration_ms": 200,
+            "description": "Sudden deceleration indicating harsh braking"
+        },
+        "impact_detection": {
+            "threshold_g": 2.5,
+            "any_axis": true,
+            "description": "Sudden high-g force on any axis indicates collision"
+        },
+        "severe_crash": {
+            "threshold_g": 4.0,
+            "any_axis": true,
+            "description": "Very high-g force indicates severe crash - immediate emergency"
+        },
+        "rollover_detection": {
+            "z_axis_threshold_g": -0.5,
+            "duration_ms": 1000,
+            "description": "Sustained negative Z-axis indicates vehicle rollover"
+        }
+    },
+    "gyroscope": {
+        "unit": "degrees/second",
+        "normal_driving": {
+            "x_range": [
+                -30,
+                30
+            ],
+            "y_range": [
+                -30,
+                30
+            ],
+            "z_range": [
+                -45,
+                45
+            ],
+            "description": "Normal rotational movements during driving"
+        },
+        "sudden_spin": {
+            "threshold_dps": 120,
+            "any_axis": true,
+            "description": "Rapid spinning indicates loss of control"
+        },
+        "head_tilt_drowsiness": {
+            "x_axis_threshold_dps": 15,
+            "sustained_duration_seconds": 3,
+            "description": "Sustained head tilt detected via mounted sensor may indicate drowsiness"
+        }
+    },
+    "vibration_analysis": {
+        "normal_engine_frequency_hz": [
+            20,
+            80
+        ],
+        "stationary_threshold_g": 0.05,
+        "stationary_duration_seconds": 30,
+        "description": "If vibration drops to near-zero while system active, vehicle may have stopped unexpectedly"
+    },
+    "composite_scores": {
+        "minor_event": {
+            "acceleration_g": 1.0,
+            "gyro_dps": 60,
+            "description": "Minor driving event - log but no alert"
+        },
+        "moderate_event": {
+            "acceleration_g": 1.5,
+            "gyro_dps": 90,
+            "description": "Moderate event - warning alert"
+        },
+        "severe_event": {
+            "acceleration_g": 2.5,
+            "gyro_dps": 120,
+            "description": "Severe event - critical alert, check driver"
+        },
+        "crash_event": {
+            "acceleration_g": 4.0,
+            "gyro_dps": 180,
+            "description": "Crash detected - emergency protocol"
+        }
+    }
+}

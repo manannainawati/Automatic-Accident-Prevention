@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accident Prevention System — Live Dashboard</title>
+    <meta name="description" content="Real-time monitoring dashboard for the Automatic Accident Prevention System">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header id="main-header">
+        <div class="header-left">
+            <div class="logo-icon">🛡️</div>
+            <div>
+                <h1>Accident Prevention System</h1>
+                <p class="subtitle">Real-Time Monitoring Dashboard</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="connection-status" id="connection-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting...</span>
+            </div>
+            <button id="btn-emergency-stop" class="btn btn-emergency" onclick="triggerEmergencyStop()">
+                ⛔ EMERGENCY STOP
+            </button>
+            <button id="btn-reset" class="btn btn-reset" onclick="resetSystem()">
+                🔄 Reset System
+            </button>
+        </div>
+    </header>
+
+    <!-- Alert Banner -->
+    <div id="alert-banner" class="alert-banner hidden">
+        <div class="alert-icon">🚨</div>
+        <div class="alert-content">
+            <strong id="alert-level-text">NORMAL</strong>
+            <span id="alert-reason-text"></span>
+        </div>
+        <div class="alert-time" id="alert-time"></div>
+    </div>
+
+    <!-- Main Grid -->
+    <main class="dashboard-grid">
+        <!-- Status Cards Row -->
+        <section class="status-cards">
+            <div class="card status-card" id="card-heart-rate">
+                <div class="card-icon">❤️</div>
+                <div class="card-content">
+                    <div class="card-label">Heart Rate</div>
+                    <div class="card-value" id="val-heart-rate">--</div>
+                    <div class="card-unit">BPM</div>
+                </div>
+                <div class="card-status" id="status-heart-rate">--</div>
+            </div>
+
+            <div class="card status-card" id="card-spo2">
+                <div class="card-icon">🫁</div>
+                <div class="card-content">
+                    <div class="card-label">SpO2</div>
+                    <div class="card-value" id="val-spo2">--</div>
+                    <div class="card-unit">%</div>
+                </div>
+                <div class="card-status" id="status-spo2">--</div>
+            </div>
+
+            <div class="card status-card" id="card-speed">
+                <div class="card-icon">🚗</div>
+                <div class="card-content">
+                    <div class="card-label">Speed</div>
+                    <div class="card-value" id="val-speed">--</div>
+                    <div class="card-unit">km/h</div>
+                </div>
+                <div class="card-status" id="status-speed">--</div>
+            </div>
+
+            <div class="card status-card" id="card-drowsiness">
+                <div class="card-icon">😴</div>
+                <div class="card-content">
+                    <div class="card-label">Drowsiness</div>
+                    <div class="card-value" id="val-drowsiness">--</div>
+                    <div class="card-unit">score</div>
+                </div>
+                <div class="card-status" id="status-drowsiness">--</div>
+            </div>
+
+            <div class="card status-card" id="card-motor">
+                <div class="card-icon">⚙️</div>
+                <div class="card-content">
+                    <div class="card-label">Motor</div>
+                    <div class="card-value" id="val-motor">--</div>
+                    <div class="card-unit">&nbsp;</div>
+                </div>
+                <div class="card-status" id="status-motor">--</div>
+            </div>
+
+            <div class="card status-card" id="card-alert-level">
+                <div class="card-icon">🔔</div>
+                <div class="card-content">
+                    <div class="card-label">Alert Level</div>
+                    <div class="card-value" id="val-alert-level">NORMAL</div>
+                    <div class="card-unit">&nbsp;</div>
+                </div>
+                <div class="card-status" id="status-alert">--</div>
+            </div>
+        </section>
+
+        <!-- Charts Row -->
+        <section class="charts-row">
+            <div class="card chart-card">
+                <h3>❤️ Heart Rate & SpO2</h3>
+                <canvas id="chart-vitals"></canvas>
+            </div>
+            <div class="card chart-card">
+                <h3>📐 Acceleration (g)</h3>
+                <canvas id="chart-accel"></canvas>
+            </div>
+        </section>
+
+        <!-- Map + Alerts Row -->
+        <section class="bottom-row">
+            <div class="card map-card">
+                <h3>📍 GPS Location</h3>
+                <div id="map-container">
+                    <iframe
+                        id="gps-map"
+                        width="100%"
+                        height="100%"
+                        style="border:0;border-radius:8px;"
+                        loading="lazy"
+                        allowfullscreen
+                        src="https://www.openstreetmap.org/export/embed.html?bbox=73.8%2C18.5%2C73.9%2C18.55&layer=mapnik">
+                    </iframe>
+                    <div class="map-overlay">
+                        <span id="gps-coords">Lat: --, Lng: --</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card alerts-card">
+                <h3>🔔 Recent Alerts</h3>
+                <div id="alerts-list" class="alerts-list">
+                    <div class="alert-empty">No alerts yet</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Accelerometer Detail -->
+        <section class="detail-row">
+            <div class="card detail-card">
+                <h3>🔄 Gyroscope (°/s)</h3>
+                <canvas id="chart-gyro"></canvas>
+            </div>
+            <div class="card detail-card">
+                <h3>📊 System Log</h3>
+                <div id="system-log" class="system-log">
+                    <div class="log-entry log-info">System initialized. Waiting for sensor data...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Automatic Accident Prevention System &copy; 2026 | ESP32 + MAX30102 + MPU6050 + GPS NEO-6M</p>
+    </footer>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
