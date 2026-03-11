@@ -1,12 +1,13 @@
-# 🛡️ Automatic Accident Prevention System
+# 🛡️ AI-Powered Accident Prevention & Detection System
 
-A comprehensive IoT-based system that detects driver drowsiness, health emergencies, and vehicle crashes using ESP32 with multiple sensors. Automatically stops the vehicle and alerts authorities with GPS location.
+A comprehensive IoT and Telematics system that detects driver drowsiness, health emergencies, and vehicle crashes using an Arduino-based sensor suite. The system proactively stops the vehicle and alerts authorities with real-time GPS coordinates to ensure rapid response.
 
 ## 🏗 Architecture
 
 ```
-ESP32 + Sensors  ──►  Flask Backend  ──►  Twilio SMS / Email
-                         ▲                to Authorities
+Arduino + Sensors ──►  Core Engine  ──►  Twilio SMS / Email
+                         (Python/Flask)         to Authorities
+                         ▲
 Face Detection  ─────────┘
 ```
 
@@ -14,73 +15,71 @@ Face Detection  ─────────┘
 
 | Component | Purpose |
 |:---|:---|
-| ESP32 DevKit V1 | Main controller + WiFi |
+| Arduino Uno | Main controller & Data Acquisition |
+| WiFi Shield (e.g., ESP8266) | Remote connectivity for the Arduino |
 | MAX30102 | Heart rate + SpO2 monitoring |
 | MPU6050 | Accelerometer + Gyroscope (crash/tilt detection) |
 | GPS NEO-6M | Real-time location tracking |
-| Buzzer | Audible alert |
-| LED | Visual warning indicator |
+| Buzzer & LED | Audible and Visual alerting |
 | 100 RPM Gear Motor | Simulates vehicle motor (stop/go) |
 | L298N Motor Driver | Motor control interface |
-| Breadboard + Wires | Prototyping connections |
 
 ## 🚀 Quick Setup
 
 ### 1. Hardware Assembly
 
-Follow the wiring guide: [`docs/wiring_diagram.md`](docs/wiring_diagram.md)
+Follow the standard wiring guide for the I2C sensors and the motor driver connected to your Arduino Uno.
 
-### 2. Backend Setup
+### 2. Core Engine Setup (Backend)
+
+The core logic handles thresholds, ML analytics integration, and dispatching alerts.
 
 ```bash
-# Navigate to backend folder
-cd backend
+# Navigate to the core engine folder
+cd core_engine
 
 # Create virtual environment
 python -m venv venv
 
-# Activate it
-# Windows:
+# Activate it (Windows)
 venv\Scripts\activate
-# Mac/Linux:
-# source venv/bin/activate
+# For Mac/Linux: source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Copy and edit environment variables
+# Configure Environment
 copy .env.example .env
 # Edit .env with your Twilio credentials, email settings, etc.
 
 # Run the server
-python app.py
+python main.py
 ```
 
-The dashboard will be available at: **http://localhost:5000/dashboard**
+The live monitoring dashboard will be available at: **http://localhost:5000/dashboard**
 
-### 3. ESP32 Firmware Upload
+### 3. Arduino Firmware Upload
 
-1. Open `esp32_firmware/accident_prevention_system.ino` in **Arduino IDE**
-2. Install required board: **ESP32 by Espressif** (via Board Manager)
-3. Install libraries (via Library Manager):
+1. Open `arduino_firmware/arduino_accident_prevention.ino` in the **Arduino IDE**.
+2. Install required board files for the **Arduino Uno**.
+3. Install required libraries (via Library Manager):
    - `MAX30105` by SparkFun
    - `Adafruit MPU6050`
    - `TinyGPSPlus` by Mikal Hart
    - `ArduinoJson` by Benoit Blanchon
-4. **Edit the configuration** in the `.ino` file:
+4. **Configure network settings** in the `.ino` file:
    ```cpp
-   const char* WIFI_SSID     = "YOUR_WIFI_SSID";
-   const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-   const char* SERVER_URL    = "http://YOUR_PC_IP:5000";
+   const char* SERVER_URL = "http://YOUR_PC_IP:5000";
+   // Add your WiFi Shield SSID and Password
    ```
-5. Select board: **ESP32 Dev Module**
-6. Upload!
+5. Select board: **Arduino Uno**
+6. Upload the sketch!
 
 ### 4. Face Detection Integration
 
-Your existing face detection module should send HTTP POST requests to:
+The face detection module sends active HTTP POST requests to track drowsiness and attention.
 
-```
+```http
 POST http://YOUR_PC_IP:5000/api/face-detection
 Content-Type: application/json
 
@@ -99,60 +98,50 @@ Content-Type: application/json
 
 | Method | Endpoint | Description |
 |:---:|:---|:---|
-| POST | `/api/sensor-data` | Receive ESP32 sensor readings |
-| POST | `/api/face-detection` | Receive face detection results |
-| GET | `/api/status` | Current system status |
-| GET | `/api/alerts` | Alert history |
-| GET | `/api/sensor-history` | Sensor readings for charts |
-| POST | `/api/emergency-stop` | Manual emergency stop |
-| POST | `/api/reset` | Reset system to NORMAL |
-| GET | `/api/esp32-command` | ESP32 polls for commands |
+| POST | `/api/sensor-data` | Receive Arduino sensor telemetry |
+| POST | `/api/face-detection` | Receive facial analytics results |
+| GET | `/api/status` | Current system health and status |
+| GET | `/api/alerts` | Alert log history |
+| GET | `/api/sensor-history` | Sensor metrics for dashboard charts |
+| POST | `/api/emergency-stop` | Manual emergency stop trigger |
+| POST | `/api/reset` | Reset system state to NORMAL |
 
 ## 🔔 Alert System
 
 | Level | Triggers | Actions |
-|:---:|:---|:---|
-| ✅ NORMAL | All readings safe | No action |
-| ⚠️ WARNING | Slight HR anomaly, drowsiness signs | Buzzer + LED |
-| 🔶 CRITICAL | Significant HR/SpO2 issues, impact | Warning SMS |
-| 🚨 EMERGENCY | Severe crash, driver unconscious, cardiac event | **Motor stop + SMS + Email to authorities with GPS** |
+|:-----:|:--------:|:-------:|
+| ✅ NORMAL | All readings stable | Passive Monitoring |
+| ⚠️ WARNING | Minor HR anomalies, drowsiness signs | Buzzer + LED Warning |
+| 🔶 CRITICAL | Major HR/SpO2 fluctuations, harsh braking | Warning SMS Dispatch |
+| 🚨 EMERGENCY | Severe crash (MPU6050), driver blackout | **Motor stop + SMS/Email to authorities with GPS** |
 
-## 📁 Project Structure
+## 📁 System Structure
 
 ```
-├── esp32_firmware/
-│   └── accident_prevention_system.ino    # ESP32 Arduino sketch
-├── backend/
-│   ├── app.py                            # Flask API server
-│   ├── config.py                         # Configuration & thresholds
-│   ├── models.py                         # Database models
-│   ├── decision_engine.py                # Alert logic engine
-│   ├── alert_service.py                  # SMS + Email notifications
+├── arduino_firmware/
+│   └── arduino_accident_prevention.ino   # Main Arduino sketch
+├── core_engine/
+│   ├── main.py                           # Flask API server
+│   ├── config.py                         # Thresholds & Constraints
+│   ├── models.py                         # DB Models
+│   ├── decision_engine.py                # Core alert logic engine
+│   ├── alert_service.py                  # Twilio SMS + Email service
 │   ├── requirements.txt                  # Python dependencies
-│   ├── .env.example                      # Environment variable template
+│   ├── .env.example                      # ENV templates
 │   ├── templates/dashboard.html          # Dashboard UI
 │   └── static/                           # CSS + JS assets
 ├── dataset/
-│   ├── heart_rate_thresholds.json        # HR/SpO2 threshold config
-│   ├── mpu6050_thresholds.json           # Motion threshold config
-│   ├── sample_sensor_data.csv            # Simulated sensor data
-│   └── README.md                         # Dataset docs
-├── docs/
-│   ├── wiring_diagram.md                 # Hardware wiring guide
-│   └── system_architecture.md            # System overview
-└── README.md                             # This file
+│   ├── heart_rate_thresholds.json        # HR definitions
+│   ├── mpu6050_thresholds.json           # Motion definitions
+│   └── sample_sensor_data.csv            # Simulated testing data
+└── README.md                             # Global instructions
 ```
 
 ## ⚙️ Configuration
-
-All thresholds are configurable in `backend/config.py`:
-
-- Heart rate ranges (normal, warning, critical, emergency)
-- SpO2 thresholds
-- Acceleration impact detection levels
-- Drowsiness score thresholds
-- Alert cooldown timers
+All behavioral thresholds are configurable via `core_engine/config.py`:
+- Biometric limits (Heart rate: normal, warning, critical)
+- Inertial impact forces (G-force acceleration triggers)
+- Drowsiness limits and cooldown timers
 
 ## 📜 License
-
-This project is for educational and research purposes.
+This system is developed for research and educational purposes.
