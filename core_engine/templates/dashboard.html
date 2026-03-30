@@ -1,23 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accident Prevention System — Live Dashboard</title>
-    <meta name="description" content="Real-time monitoring dashboard for the Automatic Accident Prevention System">
-    <link rel="stylesheet" href="/static/css/dashboard.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}Accident Prevention System — Live Dashboard{% endblock %}
+{% block meta_description %}Real-time monitoring dashboard for the Automatic Accident Prevention System{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/static/css/dashboard.css">
+{% endblock %}
+
+{% block content %}
     <!-- Header -->
     <header id="main-header">
         <div class="header-left">
-            <div class="logo-icon">🛡️</div>
             <div>
-                <h1>Accident Prevention System</h1>
-                <p class="subtitle">Real-Time Monitoring Dashboard</p>
+                <h1>Live Monitoring Dashboard</h1>
+                <p class="subtitle">Real-Time Sensor Data & Alerts</p>
             </div>
         </div>
         <div class="header-right">
@@ -113,11 +110,15 @@
         <section class="charts-row">
             <div class="card chart-card">
                 <h3>❤️ Heart Rate & SpO2</h3>
-                <canvas id="chart-vitals"></canvas>
+                <div style="position: relative; height: 300px; width: 100%; padding: 10px 20px 20px;">
+                    <canvas id="chart-vitals"></canvas>
+                </div>
             </div>
             <div class="card chart-card">
                 <h3>📐 Acceleration (g)</h3>
-                <canvas id="chart-accel"></canvas>
+                <div style="position: relative; height: 300px; width: 100%; padding: 10px 20px 20px;">
+                    <canvas id="chart-accel"></canvas>
+                </div>
             </div>
         </section>
 
@@ -126,14 +127,9 @@
             <div class="card map-card">
                 <h3>📍 GPS Location</h3>
                 <div id="map-container">
-                    <iframe
-                        id="gps-map"
-                        width="100%"
-                        height="100%"
-                        style="border:0;border-radius:8px;"
-                        loading="lazy"
-                        allowfullscreen
-                        src="https://www.openstreetmap.org/export/embed.html?bbox=73.8%2C18.5%2C73.9%2C18.55&layer=mapnik">
+                    <iframe id="gps-map" width="100%" height="100%" style="border:0;border-radius:8px;" loading="lazy"
+                        allowfullscreen referrerpolicy="no-referrer-when-downgrade"
+                        src="https://www.google.com/maps/embed/v1/place?key=AIzaSyAV7_ckPLPvVl02H2wiD2ohB6NInFZSjpg&q=18.5,73.85&zoom=15">
                     </iframe>
                     <div class="map-overlay">
                         <span id="gps-coords">Lat: --, Lng: --</span>
@@ -153,7 +149,9 @@
         <section class="detail-row">
             <div class="card detail-card">
                 <h3>🔄 Gyroscope (°/s)</h3>
-                <canvas id="chart-gyro"></canvas>
+                <div style="position: relative; height: 300px; width: 100%; padding: 10px 20px 20px;">
+                    <canvas id="chart-gyro"></canvas>
+                </div>
             </div>
             <div class="card detail-card">
                 <h3>📊 System Log</h3>
@@ -167,7 +165,8 @@
     <footer>
         <p>Automatic Accident Prevention System &copy; 2026 | ESP32 + MAX30102 + MPU6050 + GPS NEO-6M</p>
     </footer>
+{% endblock %}
 
-    <script src="/static/js/dashboard.js"></script>
-</body>
-</html>
+{% block scripts %}
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}

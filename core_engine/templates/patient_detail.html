@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}{{ patient.name }} — Patient Detail{% endblock %}
+{% block meta_description %}Patient monitoring, heartbeat visualization, and medical history for {{ patient.name }}{% endblock %}
+{% block nav_patients %}active{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="/static/css/patients.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+        <a href="/patients">← All Patients</a>
+        <span>/</span>
+        <span>{{ patient.name }}</span>
+    </div>
+
+    <!-- Patient Info Header -->
+    <header class="patient-header">
+        <div class="patient-avatar" id="patient-avatar">{{ patient.name[0] }}</div>
+        <div class="patient-info">
+            <h1 id="patient-name">{{ patient.name }}</h1>
+            <div class="patient-meta">
+                {% if patient.age %}<span class="meta-tag">🎂 {{ patient.age }} yrs</span>{% endif %}
+                {% if patient.gender %}<span class="meta-tag">{{ patient.gender }}</span>{% endif %}
+                {% if patient.blood_group %}<span class="meta-tag blood-tag">🩸 {{ patient.blood_group }}</span>{% endif %}
+                {% if patient.contact_number %}<span class="meta-tag">📞 {{ patient.contact_number }}</span>{% endif %}
+                {% if patient.emergency_contact %}<span class="meta-tag">🆘 {{ patient.emergency_contact }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="patient-actions">
+            <button class="btn btn-danger-outline" onclick="deletePatient({{ patient.id }})">🗑️ Delete Patient</button>
+        </div>
+    </header>
+
+    <!-- Vital Signs Cards — 4 in a row -->
+    <section class="vitals-grid">
+        <div class="card vital-card heartbeat-card" id="vital-hr">
+            <div class="vital-icon">
+                <span class="heartbeat-pulse" id="heartbeat-pulse">❤️</span>
+            </div>
+            <div class="vital-info">
+                <span class="vital-label">Heart Rate</span>
+                <span class="vital-value" id="vital-hr-val">--</span>
+                <span class="vital-unit">BPM</span>
+            </div>
+        </div>
+        <div class="card vital-card" id="vital-spo2">
+            <div class="vital-icon">🫁</div>
+            <div class="vital-info">
+                <span class="vital-label">SpO2</span>
+                <span class="vital-value" id="vital-spo2-val">--</span>
+                <span class="vital-unit">%</span>
+            </div>
+        </div>
+        <div class="card vital-card" id="vital-alert">
+            <div class="vital-icon">🔔</div>
+            <div class="vital-info">
+                <span class="vital-label">Alert Level</span>
+                <span class="vital-value alert-badge-val" id="vital-alert-val">NORMAL</span>
+                <span class="vital-unit">&nbsp;</span>
+            </div>
+        </div>
+        <div class="card vital-card" id="vital-readings">
+            <div class="vital-icon">📊</div>
+            <div class="vital-info">
+                <span class="vital-label">Readings</span>
+                <span class="vital-value" id="vital-readings-val">0</span>
+                <span class="vital-unit">total</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Heartbeat Chart — fixed height -->
+    <section class="chart-section">
+        <div class="card heartbeat-chart-card">
+            <div class="chart-header">
+                <h3>❤️ Heartbeat Monitor</h3>
+                <div class="chart-controls">
+                    <span class="live-indicator" id="live-indicator">
+                        <span class="live-dot"></span> LIVE
+                    </span>
+                </div>
+            </div>
+            <div class="chart-container-fixed">
+                <canvas id="chart-heartbeat"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- Three Column: Add Reading | Medical History | Info -->
+    <section class="actions-grid">
+        <!-- Add Sensor Reading Form -->
+        <div class="card action-card">
+            <h3>📝 Add Sensor Reading</h3>
+            <div class="action-card-body">
+                <form id="reading-form" onsubmit="submitReading(event, {{ patient.id }})">
+                    <div class="compact-form-grid">
+                        <div class="form-group">
+                            <label>Heart Rate (BPM)</label>
+                            <input type="number" id="r-hr" step="0.1" min="0" max="300" placeholder="72" required>
+                        </div>
+                        <div class="form-group">
+                            <label>SpO2 (%)</label>
+                            <input type="number" id="r-spo2" step="0.1" min="0" max="100" placeholder="98">
+                        </div>
+                        <div class="form-group">
+                            <label>Accel X (g)</label>
+                            <input type="number" id="r-ax" step="0.01" placeholder="0.05" value="0.05">
+                        </div>
+                        <div class="form-group">
+                            <label>Accel Y (g)</label>
+                            <input type="number" id="r-ay" step="0.01" placeholder="0.08" value="0.08">
+                        </div>
+                        <div class="form-group">
+                            <label>Accel Z (g)</label>
+                            <input type="number" id="r-az" step="0.01" placeholder="-0.98" value="-0.98">
+                        </div>
+                        <div class="form-group">
+                            <label>Speed (km/h)</label>
+                            <input type="number" id="r-speed" step="0.1" min="0" placeholder="45" value="0">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" id="btn-submit-reading">
+                        📤 Submit Reading
+                    </button>
+                </form>
+
+                <!-- Quick Simulate -->
+                <div class="simulate-section">
+                    <h4>⚡ Quick Simulate</h4>
+                    <div class="simulate-buttons">
+                        <button class="btn btn-sim btn-normal" onclick="simulateReading({{ patient.id }}, 'normal')">Normal</button>
+                        <button class="btn btn-sim btn-warning-sim" onclick="simulateReading({{ patient.id }}, 'warning')">Warning</button>
+                        <button class="btn btn-sim btn-critical-sim" onclick="simulateReading({{ patient.id }}, 'critical')">Critical</button>
+                        <button class="btn btn-sim btn-emergency-sim" onclick="simulateReading({{ patient.id }}, 'emergency')">Emergency</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medical History PDF Upload -->
+        <div class="card action-card">
+            <h3>📄 Medical History (PDF)</h3>
+            <div class="action-card-body">
+                <!-- Upload Area -->
+                <div class="upload-area" id="upload-area"
+                     ondragover="handleDragOver(event)"
+                     ondragleave="handleDragLeave(event)"
+                     ondrop="handleDrop(event, {{ patient.id }})">
+                    <div class="upload-icon">📁</div>
+                    <p>Drag & drop PDF files here</p>
+                    <span class="upload-or">or</span>
+                    <label class="btn btn-secondary upload-btn">
+                        Browse Files
+                        <input type="file" accept=".pdf" id="file-input" style="display:none"
+                               onchange="handleFileSelect(event, {{ patient.id }})">
+                    </label>
+                    <p class="upload-hint">Only PDF files accepted · Max 16MB</p>
+                </div>
+
+                <!-- Upload Progress -->
+                <div class="upload-progress" id="upload-progress" style="display:none">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <span id="progress-text">Uploading...</span>
+                </div>
+
+                <!-- Files List -->
+                <div class="files-list" id="files-list">
+                    <div class="files-empty">No medical records uploaded yet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works / Info Panel — spans full width -->
+        <div class="card action-card info-card">
+            <h3>ℹ️ How Alerts & Thresholds Work</h3>
+            <div class="action-card-body info-body">
+                <div class="info-thresholds">
+                    <div class="info-item">
+                        <span class="info-badge badge-normal">NORMAL</span>
+                        <span>HR: 60-100 BPM, SpO2 ≥ 95%</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-badge badge-warning">WARNING</span>
+                        <span>HR: 50-60 or 120-150, SpO2: 90-95%</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-badge badge-critical">CRITICAL</span>
+                        <span>HR: &lt;40 or &gt;150, SpO2: 80-90%</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-badge badge-emergency">EMERGENCY</span>
+                        <span>HR &gt;180, SpO2 &lt;70%</span>
+                    </div>
+                </div>
+                <div class="info-block">
+                    <strong>🔌 ESP32 + Arduino Thresholds</strong><br>
+                    Heart rate from MAX30102, acceleration from MPU6050, and drowsiness from face camera ML model all feed 
+                    into the <strong>decision engine</strong>. On <strong>EMERGENCY</strong>:<br>
+                    🛑 Motor stopped · 🔊 Buzzer on · 📍 GPS sent · 📱 SMS + Email alert
+                </div>
+                <div class="info-block">
+                    <strong>💾 Data Storage</strong><br>
+                    All readings stored in SQLite at
+                    <code>core_engine/instance/accident_prevention.db</code><br>
+                    Access via API: <code>/api/patients/{{ patient.id }}/readings</code><br>
+                    All patients: <code>/api/patients</code><br>
+                    Medical files: <code>/api/patients/{{ patient.id }}/medical-history</code>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Readings History Table — scrollable -->
+    <section class="readings-section">
+        <div class="card table-card">
+            <h3>📈 Recent Readings (Last 50)</h3>
+            <div class="table-scroll-wrapper">
+                <table id="readings-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Heart Rate</th>
+                            <th>SpO2</th>
+                            <th>Accel (X/Y/Z)</th>
+                            <th>Speed</th>
+                            <th>Alert</th>
+                        </tr>
+                    </thead>
+                    <tbody id="readings-tbody">
+                        <tr><td colspan="6" class="empty-row">Loading readings...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Hidden patient data -->
+<script>
+    const PATIENT_ID = {{ patient.id }};
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/patients.js"></script>
+{% endblock %}

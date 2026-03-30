@@ -341,8 +341,7 @@ function updateAlertBanner(alertLevel, reasons) {
 
 function updateMap(lat, lng) {
     const iframe = document.getElementById('gps-map');
-    const bbox = `${lng - 0.01},${lat - 0.005},${lng + 0.01},${lat + 0.005}`;
-    const newSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`;
+    const newSrc = `https://www.google.com/maps/embed/v1/place?key=AIzaSyAV7_ckPLPvVl02H2wiD2ohB6NInFZSjpg&q=${lat},${lng}&zoom=15`;
     if (iframe.src !== newSrc) {
         iframe.src = newSrc;
     }

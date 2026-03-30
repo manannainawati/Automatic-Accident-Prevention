@@ -361,10 +361,6 @@ header h1 {
     min-height: 300px;
 }
 
-.chart-card canvas {
-    padding: 16px 20px 20px;
-}
-
 /* ---- Bottom Row ---- */
 
 .bottom-row {

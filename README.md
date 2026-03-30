@@ -1,147 +1,91 @@
-# 🛡️ AI-Powered Accident Prevention & Detection System
+# Automatic Accident Prevention & Patient Monitoring System
 
-A comprehensive IoT and Telematics system that detects driver drowsiness, health emergencies, and vehicle crashes using an Arduino-based sensor suite. The system proactively stops the vehicle and alerts authorities with real-time GPS coordinates to ensure rapid response.
+A comprehensive IoT and Web monitoring system designed to detect accidents, monitor driver drowsiness, and manage patient medical history. It integrates ESP32 hardware sensors with a real-time Python Flask dashboard and patient management REST API.
 
-## 🏗 Architecture
+---
 
-```
-Arduino + Sensors ──►  Core Engine  ──►  Twilio SMS / Email
-                         (Python/Flask)         to Authorities
-                         ▲
-Face Detection  ─────────┘
-```
+## 🚀 Key Features
 
-## 📦 Hardware Required
+### 1. Hardware-Level Monitoring (ESP32)
+*   **Crash Detection:** Uses MPU6050 Accelerometer & Gyroscope to detect sudden impacts. Thresholds > 4g trigger emergency stops.
+*   **Health Monitoring:** Uses MAX30102 to monitor live Heart Rate and Blood Oxygen (SpO2).
+*   **Location Tracking:** Integrates GPS NEO-6M to send precise coordinates of incidents.
+*   **Drowsiness Detection:** Camera-based ML model analyzes eye closure/drowsiness scores.
+*   **Actuators:** Automatically stops DC Motor, triggers an alarm buzzer, and activates LED warnings during critical conditions.
 
-| Component | Purpose |
-|:---|:---|
-| Arduino Uno | Main controller & Data Acquisition |
-| WiFi Shield (e.g., ESP8266) | Remote connectivity for the Arduino |
-| MAX30102 | Heart rate + SpO2 monitoring |
-| MPU6050 | Accelerometer + Gyroscope (crash/tilt detection) |
-| GPS NEO-6M | Real-time location tracking |
-| Buzzer & LED | Audible and Visual alerting |
-| 100 RPM Gear Motor | Simulates vehicle motor (stop/go) |
-| L298N Motor Driver | Motor control interface |
+### 2. Live Global Dashboard
+*   **Real-time Vitals:** Live Chart.js graphs tracking Heart Rate, SpO2, and Acceleration.
+*   **System Status:** Centralized view of Motor status (Running/Stopped), Global Alert Level (Normal/Warning/Critical/Emergency), and recent system logs.
+*   **Live Map:** Embedded GPS tracking for immediate response.
 
-## 🚀 Quick Setup
+### 3. Patient Management System
+*   **Comprehensive Profiles:** Register and manage patients (Age, Gender, Blood Group, Emergency Contacts).
+*   **Individual Monitoring:** Dedicated live heartbeat and SpO2 monitor per patient.
+*   **Simulation & Testing:** Built-in tools for testing specific scenarios (Normal, Warning, Critical, Emergency).
+*   **Medical History (PDFs):** Secure drag-and-drop storage for patient medical histories using SQLite BLOB storage, integrated directly into the web interface.
 
-### 1. Hardware Assembly
+---
 
-Follow the standard wiring guide for the I2C sensors and the motor driver connected to your Arduino Uno.
+## ⚠️ Alert Levels & Thresholds
 
-### 2. Core Engine Setup (Backend)
+The core **Decision Engine** evaluates streaming data and flags 4 distinct levels:
+1.  **NORMAL:** HR (60-100 BPM), SpO2 (≥95%), Accel (<2g)
+2.  **WARNING:** Elevated/Lowered HR, SpO2 (90-95%)
+3.  **CRITICAL:** Dangerous HR (<40 or >150), SpO2 (80-90%), High Drowsiness score
+4.  **EMERGENCY:** Heart Attack indicators (HR >180, SpO2 <70%), Crash detected (Accel >4g).
+    *   *System Action:* Motor stopped automatically, Buzzer triggered, GPS Coordinates acquired, SMS + Email sent to authorities.
 
-The core logic handles thresholds, ML analytics integration, and dispatching alerts.
+---
 
-```bash
-# Navigate to the core engine folder
-cd core_engine
+## 🛠️ Tech Stack & Architecture
 
-# Create virtual environment
-python -m venv venv
+*   **Hardware:** ESP32, MAX30102 (Pulse Oximeter), MPU6050 (IMU), GPS NEO-6M, DC Motor, Buzzer.
+*   **Backend:** Python 3, Flask framework, SQLite3 (Database storage for patients and telemetry).
+*   **Frontend HTML/CSS/JS:** Custom "Dark Glassmorphism" UI, Vanilla Javascript, Chart.js (for real-time visualizations).
 
-# Activate it (Windows)
-venv\Scripts\activate
-# For Mac/Linux: source venv/bin/activate
+---
 
-# Install dependencies
-pip install -r requirements.txt
+## 💾 Installation & Setup
 
-# Configure Environment
-copy .env.example .env
-# Edit .env with your Twilio credentials, email settings, etc.
+### Prerequisites
+1.  Python 3.8+ installed on your machine.
+2.  Arduino IDE configured for ESP32.
 
-# Run the server
-python main.py
-```
+### Step-by-Step Backend Setup
+1.  Navigate into the `core_engine` directory.
+    ```bash
+    cd core_engine
+    ```
+2.  Install required Python packages:
+    ```bash
+    pip install flask werkzeug
+    ```
+3.  Run the Flask Application:
+    ```bash
+    python main.py
+    ```
+    *The database (`instance/accident_prevention.db`) and necessary tables will automatically structure themselves upon the first run.*
+4.  Access the Web Interface:
+    *   **Dashboard:** `http://localhost:5000/dashboard`
+    *   **Patient Manager:** `http://localhost:5000/patients`
 
-The live monitoring dashboard will be available at: **http://localhost:5000/dashboard**
+### API Endpoints Overview
+*   `GET /api/patients` - List all registered patients
+*   `GET /api/patients/<id>/readings` - Fetch all saved sensor readings for a patient
+*   `GET /api/patients/<id>/medical-history` - Fetch uploaded medical PDF records
+*   `POST /api/sensor-data` - Push raw ESP32 telemetry to the decision engine
 
-### 3. Arduino Firmware Upload
+---
 
-1. Open `arduino_firmware/arduino_accident_prevention.ino` in the **Arduino IDE**.
-2. Install required board files for the **Arduino Uno**.
-3. Install required libraries (via Library Manager):
-   - `MAX30105` by SparkFun
-   - `Adafruit MPU6050`
-   - `TinyGPSPlus` by Mikal Hart
-   - `ArduinoJson` by Benoit Blanchon
-4. **Configure network settings** in the `.ino` file:
-   ```cpp
-   const char* SERVER_URL = "http://YOUR_PC_IP:5000";
-   // Add your WiFi Shield SSID and Password
-   ```
-5. Select board: **Arduino Uno**
-6. Upload the sketch!
+## 📸 Interface Previews
 
-### 4. Face Detection Integration
+**Patient Management Interface**
+A comprehensive detail page showing 4-grid vitals, fixed-height live tracking charts (BPM and SpO2), quick simulation tools, and PDF Drag&Drop areas.
 
-The face detection module sends active HTTP POST requests to track drowsiness and attention.
+**Global Dashboard**
+A command-center-style UI showing aggregated telemetry, map tracking, and alert logs across the entire system.
 
-```http
-POST http://YOUR_PC_IP:5000/api/face-detection
-Content-Type: application/json
+---
 
-{
-    "drowsiness_score": 0.3,
-    "eyes_closed": false,
-    "eye_closure_duration_sec": 0.0,
-    "yawn_detected": false,
-    "yawn_count_last_min": 0,
-    "face_detected": true,
-    "confidence": 0.95
-}
-```
-
-## 📡 API Endpoints
-
-| Method | Endpoint | Description |
-|:---:|:---|:---|
-| POST | `/api/sensor-data` | Receive Arduino sensor telemetry |
-| POST | `/api/face-detection` | Receive facial analytics results |
-| GET | `/api/status` | Current system health and status |
-| GET | `/api/alerts` | Alert log history |
-| GET | `/api/sensor-history` | Sensor metrics for dashboard charts |
-| POST | `/api/emergency-stop` | Manual emergency stop trigger |
-| POST | `/api/reset` | Reset system state to NORMAL |
-
-## 🔔 Alert System
-
-| Level | Triggers | Actions |
-|:-----:|:--------:|:-------:|
-| ✅ NORMAL | All readings stable | Passive Monitoring |
-| ⚠️ WARNING | Minor HR anomalies, drowsiness signs | Buzzer + LED Warning |
-| 🔶 CRITICAL | Major HR/SpO2 fluctuations, harsh braking | Warning SMS Dispatch |
-| 🚨 EMERGENCY | Severe crash (MPU6050), driver blackout | **Motor stop + SMS/Email to authorities with GPS** |
-
-## 📁 System Structure
-
-```
-├── arduino_firmware/
-│   └── arduino_accident_prevention.ino   # Main Arduino sketch
-├── core_engine/
-│   ├── main.py                           # Flask API server
-│   ├── config.py                         # Thresholds & Constraints
-│   ├── models.py                         # DB Models
-│   ├── decision_engine.py                # Core alert logic engine
-│   ├── alert_service.py                  # Twilio SMS + Email service
-│   ├── requirements.txt                  # Python dependencies
-│   ├── .env.example                      # ENV templates
-│   ├── templates/dashboard.html          # Dashboard UI
-│   └── static/                           # CSS + JS assets
-├── dataset/
-│   ├── heart_rate_thresholds.json        # HR definitions
-│   ├── mpu6050_thresholds.json           # Motion definitions
-│   └── sample_sensor_data.csv            # Simulated testing data
-└── README.md                             # Global instructions
-```
-
-## ⚙️ Configuration
-All behavioral thresholds are configurable via `core_engine/config.py`:
-- Biometric limits (Heart rate: normal, warning, critical)
-- Inertial impact forces (G-force acceleration triggers)
-- Drowsiness limits and cooldown timers
-
-## 📜 License
-This system is developed for research and educational purposes.
+## 🛡️ License
+MIT License. Created for the Automatic Accident Prevention System project (2026).

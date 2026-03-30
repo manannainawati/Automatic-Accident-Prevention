@@ -4,6 +4,68 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 
+class Patient(db.Model):
+    """Stores patient information."""
+
+    __tablename__ = "patients"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    name = db.Column(db.String(120), nullable=False)
+    age = db.Column(db.Integer, nullable=True)
+    gender = db.Column(db.String(20), nullable=True)
+    blood_group = db.Column(db.String(10), nullable=True)
+    contact_number = db.Column(db.String(20), nullable=True)
+    emergency_contact = db.Column(db.String(20), nullable=True)
+    address = db.Column(db.Text, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+
+    # Relationships
+    readings = db.relationship("SensorReading", backref="patient", lazy="dynamic")
+    medical_history = db.relationship("MedicalHistory", backref="patient", lazy="dynamic",
+                                       cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "name": self.name,
+            "age": self.age,
+            "gender": self.gender,
+            "blood_group": self.blood_group,
+            "contact_number": self.contact_number,
+            "emergency_contact": self.emergency_contact,
+            "address": self.address,
+            "notes": self.notes,
+            "readings_count": self.readings.count(),
+            "files_count": self.medical_history.count(),
+        }
+
+
+class MedicalHistory(db.Model):
+    """Stores uploaded PDF medical records for a patient."""
+
+    __tablename__ = "medical_history"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    patient_id = db.Column(db.Integer, db.ForeignKey("patients.id"), nullable=False, index=True)
+    filename = db.Column(db.String(255), nullable=False)
+    file_size = db.Column(db.Integer, nullable=True)  # bytes
+    file_data = db.Column(db.LargeBinary, nullable=False)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "uploaded_at": self.uploaded_at.isoformat() if self.uploaded_at else None,
+            "patient_id": self.patient_id,
+            "filename": self.filename,
+            "file_size": self.file_size,
+        }
+
+
 class SensorReading(db.Model):
     """Stores each sensor data reading from the ESP32."""
 
@@ -11,6 +73,9 @@ class SensorReading(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    # Link to patient (optional — readings from ESP32 may not have a patient)
+    patient_id = db.Column(db.Integer, db.ForeignKey("patients.id"), nullable=True, index=True)
 
     # MAX30102 readings
     heart_rate_bpm = db.Column(db.Float, nullable=True)
@@ -37,6 +102,7 @@ class SensorReading(db.Model):
         return {
             "id": self.id,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "patient_id": self.patient_id,
             "heart_rate_bpm": self.heart_rate_bpm,
             "spo2_percent": self.spo2_percent,
             "accel_x": self.accel_x,

@@ -9,14 +9,15 @@ Main application with REST API for:
   - Serving the live monitoring dashboard
 """
 
+import io
 import json
 import logging
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_file
 from flask_cors import CORS
 
 from config import Config
-from models import db, SensorReading, FaceDetectionResult, Alert, SystemStatus
+from models import db, SensorReading, FaceDetectionResult, Alert, SystemStatus, Patient, MedicalHistory
 from decision_engine import DecisionEngine
 from alert_service import AlertService
 
@@ -385,6 +386,225 @@ def get_esp32_command():
         db.session.commit()
 
     return jsonify({"command": command}), 200
+
+
+# ---------------------------------------------------------------------------
+# Patient Management — Pages
+# ---------------------------------------------------------------------------
+
+
+@app.route("/patients")
+def patients_page():
+    """Render the patient list page."""
+    return render_template("patients.html")
+
+
+@app.route("/patients/<int:patient_id>")
+def patient_detail_page(patient_id):
+    """Render a single patient detail page."""
+    patient = Patient.query.get_or_404(patient_id)
+    return render_template("patient_detail.html", patient=patient)
+
+
+# ---------------------------------------------------------------------------
+# Patient Management — API
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/patients", methods=["GET"])
+def get_patients():
+    """Get all patients."""
+    patients = Patient.query.order_by(Patient.created_at.desc()).all()
+    return jsonify({"patients": [p.to_dict() for p in patients]}), 200
+
+
+@app.route("/api/patients", methods=["POST"])
+def create_patient():
+    """Register a new patient."""
+    try:
+        data = request.get_json()
+        if not data or not data.get("name"):
+            return jsonify({"error": "Patient name is required"}), 400
+
+        patient = Patient(
+            name=data["name"],
+            age=data.get("age"),
+            gender=data.get("gender"),
+            blood_group=data.get("blood_group"),
+            contact_number=data.get("contact_number"),
+            emergency_contact=data.get("emergency_contact"),
+            address=data.get("address"),
+            notes=data.get("notes"),
+        )
+        db.session.add(patient)
+        db.session.commit()
+
+        logger.info(f"Patient registered: {patient.name} (ID: {patient.id})")
+        return jsonify({"status": "ok", "patient": patient.to_dict()}), 201
+
+    except Exception as e:
+        logger.error(f"Error creating patient: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/patients/<int:patient_id>", methods=["GET"])
+def get_patient(patient_id):
+    """Get a single patient."""
+    patient = Patient.query.get_or_404(patient_id)
+    return jsonify({"patient": patient.to_dict()}), 200
+
+
+@app.route("/api/patients/<int:patient_id>", methods=["DELETE"])
+def delete_patient(patient_id):
+    """Delete a patient and all associated records."""
+    patient = Patient.query.get_or_404(patient_id)
+    db.session.delete(patient)
+    db.session.commit()
+    logger.info(f"Patient deleted: {patient.name} (ID: {patient_id})")
+    return jsonify({"status": "deleted"}), 200
+
+
+# ---------------------------------------------------------------------------
+# Patient Sensor Readings
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/patients/<int:patient_id>/readings", methods=["GET"])
+def get_patient_readings(patient_id):
+    """Get sensor readings for a specific patient."""
+    Patient.query.get_or_404(patient_id)
+    limit = request.args.get("limit", 100, type=int)
+    readings = (
+        SensorReading.query
+        .filter_by(patient_id=patient_id)
+        .order_by(SensorReading.timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    readings.reverse()
+    return jsonify({"readings": [r.to_dict() for r in readings]}), 200
+
+
+@app.route("/api/patients/<int:patient_id>/readings", methods=["POST"])
+def add_patient_reading(patient_id):
+    """Add a sensor reading linked to a specific patient."""
+    try:
+        Patient.query.get_or_404(patient_id)
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data received"}), 400
+
+        reading = SensorReading(
+            patient_id=patient_id,
+            heart_rate_bpm=data.get("heart_rate_bpm"),
+            spo2_percent=data.get("spo2_percent"),
+            accel_x=data.get("accel_x", 0),
+            accel_y=data.get("accel_y", 0),
+            accel_z=data.get("accel_z", -1),
+            gyro_x=data.get("gyro_x", 0),
+            gyro_y=data.get("gyro_y", 0),
+            gyro_z=data.get("gyro_z", 0),
+            latitude=data.get("latitude"),
+            longitude=data.get("longitude"),
+            speed_kmh=data.get("speed_kmh", 0),
+            gps_fix=data.get("gps_fix", False),
+        )
+
+        # Run decision engine
+        sensor_eval = decision_engine.evaluate_sensor_data(data)
+        reading.alert_level = sensor_eval["alert_level"]
+
+        db.session.add(reading)
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "reading": reading.to_dict(),
+            "alert_level": sensor_eval["alert_level"],
+        }), 201
+
+    except Exception as e:
+        logger.error(f"Error adding patient reading: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Patient Medical History (PDF Upload)
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/patients/<int:patient_id>/medical-history", methods=["GET"])
+def get_medical_history(patient_id):
+    """Get list of uploaded medical history files for a patient."""
+    Patient.query.get_or_404(patient_id)
+    files = (
+        MedicalHistory.query
+        .filter_by(patient_id=patient_id)
+        .order_by(MedicalHistory.uploaded_at.desc())
+        .all()
+    )
+    return jsonify({"files": [f.to_dict() for f in files]}), 200
+
+
+@app.route("/api/patients/<int:patient_id>/medical-history", methods=["POST"])
+def upload_medical_history(patient_id):
+    """Upload a PDF medical history file for a patient."""
+    try:
+        Patient.query.get_or_404(patient_id)
+
+        if "file" not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+
+        file = request.files["file"]
+        if file.filename == "":
+            return jsonify({"error": "No file selected"}), 400
+
+        # Accept PDF files
+        if not file.filename.lower().endswith(".pdf"):
+            return jsonify({"error": "Only PDF files are accepted"}), 400
+
+        file_data = file.read()
+        record = MedicalHistory(
+            patient_id=patient_id,
+            filename=file.filename,
+            file_size=len(file_data),
+            file_data=file_data,
+        )
+        db.session.add(record)
+        db.session.commit()
+
+        logger.info(f"Medical file uploaded: {file.filename} for patient {patient_id}")
+        return jsonify({"status": "ok", "file": record.to_dict()}), 201
+
+    except Exception as e:
+        logger.error(f"Error uploading medical history: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/patients/<int:patient_id>/medical-history/<int:file_id>/download")
+def download_medical_history(patient_id, file_id):
+    """Download a specific medical history PDF."""
+    record = MedicalHistory.query.filter_by(
+        id=file_id, patient_id=patient_id
+    ).first_or_404()
+
+    return send_file(
+        io.BytesIO(record.file_data),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=record.filename,
+    )
+
+
+@app.route("/api/patients/<int:patient_id>/medical-history/<int:file_id>", methods=["DELETE"])
+def delete_medical_history(patient_id, file_id):
+    """Delete a medical history file."""
+    record = MedicalHistory.query.filter_by(
+        id=file_id, patient_id=patient_id
+    ).first_or_404()
+    db.session.delete(record)
+    db.session.commit()
+    return jsonify({"status": "deleted"}), 200
 
 
 # ---------------------------------------------------------------------------
